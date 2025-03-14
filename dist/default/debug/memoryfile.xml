@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <project>
-  <executable name="dist/default/debug/FinalProjectVlad.X.debug.elf">
+  <executable name="dist/default/debug/Embedded---Smartwatch-Project.debug.elf">
     <memory name="data">
       <units>bytes</units>
       <length>16384</length>
-      <used>846</used>
-      <free>15538</free>
+      <used>960</used>
+      <free>15424</free>
     </memory>
     <memory name="program">
       <units>bytes</units>
       <length>263424</length>
-      <used>21306</used>
-      <free>242118</free>
+      <used>23928</used>
+      <free>239496</free>
     </memory>
   </executable>
 </project>

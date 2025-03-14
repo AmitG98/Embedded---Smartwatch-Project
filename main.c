@@ -59,6 +59,14 @@ typedef struct
 } ClockTime;
 static const uint8_t daysInMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 ClockTime currentTime = {8, 24, 35, 24, 1};
+bool inMenu = false;
+
+// ---------------- Globals for Graph ----------------
+#define GRAPH_HISTORY_SIZE 90  // Store last 90 seconds of step rate
+volatile uint8_t stepRateHistory[GRAPH_HISTORY_SIZE] = {0};
+static uint8_t graphIndex = 0;  // Index to track the current second
+bool inGraphMode = false; // Are we currently in the “Graph” sub-page?
+
 // ---------------- Function declaration to avoid implicit warnings ----------------
 void updateMenuClock(void);
 void drawTimeFormatSubpage(void);
@@ -74,6 +82,79 @@ static const uint16_t foot2Bitmap[16] = {
     0x003F, 0x383E, 0x7C1E, 0x7E10,
     0x7E7C, 0x7E78, 0x7C30, 0x3C00,
     0x2000, 0x1E00, 0x1F00, 0x0E00};
+
+// ---------------- Functions for Graph ----------------
+void updateStepRate(uint8_t stepRate) {
+    stepRateHistory[graphIndex] = stepRate;  // Store current step rate
+    graphIndex = (graphIndex + 1) % GRAPH_HISTORY_SIZE;  // Move to next second
+}
+
+void drawMenu(void);
+#define GRAPH_WIDTH 90
+#define GRAPH_HEIGHT 90
+// Draw Step Rate Graph on OLED
+void drawStepRateGraph(void) {
+    inGraphMode = true;  // Enter graph mode
+    oledC_clearScreen();  // Clear screen before drawing
+
+    // Draw the Y axis (step rate axis)
+    // oledC_DrawLine(10, 10, 10, GRAPH_HEIGHT - 10, 1, 0xFFFF); // Vertical line for Y-axis
+
+    // Drawing the X axis (time axis)
+    // oledC_DrawLine(10, GRAPH_HEIGHT - 10, GRAPH_WIDTH - 10, GRAPH_HEIGHT - 10, 1, 0xFFFF); // Horizontal line for X-axis
+
+    // Draw horizontal grid lines at 30, 60, and 100 steps
+    int step_values[] = {0, 30, 60, 100};  // Y-axis step values
+    // for (int i = 0; i < 4; i++) {
+    //     int y_pos = GRAPH_HEIGHT - 10 - (step_values[i] * (GRAPH_HEIGHT - 20) / 100);
+    //     oledC_DrawLine(10, y_pos, GRAPH_WIDTH - 10, y_pos, 1, 0xAAAA); // Draw grid lines
+    // }
+    int min_y = GRAPH_HEIGHT - 10;  // Y position for 0 (bottom of the graph)
+    int max_y = 10;  // Y position for 100 (top of the graph)
+    // Add labels to Y axis (step rate)
+    for (int i = 1; i < 4; i++) {
+        // int y_pos = GRAPH_HEIGHT - 10 - (step_values[i] * (GRAPH_HEIGHT - 20) / 100);
+        int y_pos = min_y - ((step_values[i] * (min_y - max_y)) / 100);
+        char label[4];
+        sprintf(label, "%d", step_values[i]); // Labels 0, 30, 60, 100
+        oledC_DrawString(0, y_pos - 4, 1, 1, label, 0xFFFF); // Draw label for each grid line
+
+        // Draw horizontal dotted grid line at this Y-position
+        for (int j = 0; j < 30; j++) {  // 30 dots for the full X-axis
+            int x_pos = 20 + (j * (GRAPH_WIDTH - 20) / 29);  // 30 dots over the 90 seconds (29 intervals)
+            oledC_DrawPoint(x_pos, y_pos, 0xFFFF);  // Draw a small dot on the grid line
+        }
+    }
+
+    // Draw X-axis as small dots for 90 seconds
+    for (int i = 0; i <= 9; i++) {
+        int x_pos = 20 + (i * (GRAPH_WIDTH - 20) / 9); // Divide by 9 to get 10 evenly spaced dots for 90 seconds
+        oledC_DrawThickPoint(x_pos, GRAPH_HEIGHT - 8, 2, 0xFFFF);
+    }
+
+    bool s1WasPressed = false;
+    bool s2WasPressed = false;
+
+    while (inGraphMode)
+    {
+        bool s1State = (PORTAbits.RA11 == 0);  // Check S1 button
+        bool s2State = (PORTAbits.RA12 == 0);  // Check S2 button
+
+        // If both S1 and S2 are pressed, exit the graph
+        if (s1State && s2State)
+        {
+            inGraphMode = false;  // Exit graph mode
+            inMenu = true;  // Return to menu mode
+            drawMenu();
+            break;
+        }
+
+        s1WasPressed = s1State;
+        s2WasPressed = s2State;
+
+        DELAY_milliseconds(100);  // Prevent button bouncing
+    }
+}
 
 // ---------------- Functions for Pedometer, Clock, etc. ----------------
 void errorStop(char *msg)
@@ -426,8 +507,7 @@ const char *menuItems[MENU_ITEMS_COUNT] = {
     "Set Date",
     "Exit"};
 
-bool inMenu = false;
-uint8_t selectedMenuItem = 0;
+volatile uint8_t selectedMenuItem = 0;
 
 void drawMenu(void)
 {
@@ -502,12 +582,47 @@ void updateMenuClock(void)
     }
 }
 
+// void executeMenuAction(void)
+// {
+//     if (selectedMenuItem == 0)
+//     {
+//         drawStepRateGraph();  
+//         return;
+//     }
+//     else if (selectedMenuItem == 1)
+//     {
+//         handleTimeFormatSelection();
+//         drawMenu();
+//         return;
+//     }
+//     else if (selectedMenuItem == 2)
+//     {
+//         return;
+//     }
+//     else if (selectedMenuItem == 3)
+//     {
+//         return;
+//     }
+//     else if (selectedMenuItem == 4)
+//     {
+//         inMenu = false;
+//         forceClockRedraw = true;
+//         oledC_DrawRectangle(40, 2, 115, 10, OLEDC_COLOR_BLACK);
+//         oledC_clearScreen();
+//         return;
+//     }
+//     else
+//     {
+//         printf("Invalid Menu Option\n");
+//     }
+// }
 void executeMenuAction(void)
 {
     switch (selectedMenuItem)
     {
     case 0:
-        // TODO: Show pedometer graph
+        oledC_clearScreen();   // Clear screen before drawing
+        drawStepRateGraph();   // Display the step rate graph
         break;
     case 1: // "12H/24H Interval"
         handleTimeFormatSelection();
@@ -609,6 +724,14 @@ void __attribute__((__interrupt__, auto_psv)) _T1Interrupt(void)
 
         currentSecondIndex = (currentSecondIndex + 1) % HISTORY_SIZE;
         stepsHistory[currentSecondIndex] = 0;
+
+        // ---- STEP RATE HISTORY ----
+        uint16_t totalSteps = 0;
+        for (uint8_t i = 0; i < HISTORY_SIZE; i++)
+            totalSteps += stepsHistory[i];
+
+        uint8_t stepRate = totalSteps;  // Steps per minute approximation
+        updateStepRate(stepRate);       // Store step rate in the graph buffer
     }
 
     IFS0bits.T1IF = 0; // Clear interrupt flag
@@ -667,25 +790,48 @@ int main(void)
                 bool s1State = (PORTAbits.RA11 == 0);
                 bool s2State = (PORTAbits.RA12 == 0);
 
-                // If S1 is newly pressed, move selection UP.
-                if (s1State && !s1WasPressed)
-                {
-                    if (selectedMenuItem > 0)
-                        selectedMenuItem--;
-                    drawMenu();
-                }
-                // If S2 is newly pressed, move selection DOWN.
-                if (s2State && !s2WasPressed)
-                {
-                    if (selectedMenuItem < MENU_ITEMS_COUNT - 1)
-                        selectedMenuItem++;
-                    drawMenu();
-                }
                 // If both buttons are pressed, execute the selected action.
                 if (s1State && s2State)
                 {
                     executeMenuAction();
+                    DELAY_milliseconds(200);
                 }
+                else {
+                    // If S1 is newly pressed, move selection UP.
+                    if (s1State && !s1WasPressed)
+                    {
+                        if (selectedMenuItem > 0)
+                            selectedMenuItem--;
+                        drawMenu();
+                    }
+                    // If S2 is newly pressed, move selection DOWN.
+                    if (s2State && !s2WasPressed)
+                    {
+                        if (selectedMenuItem < MENU_ITEMS_COUNT - 1)
+                            selectedMenuItem++;
+                        drawMenu();
+                    }
+                }
+                // // If S1 is newly pressed, move selection UP.
+                // if (s1State && !s1WasPressed)
+                // {
+                //     if (selectedMenuItem > 0)
+                //         selectedMenuItem--;
+                //     drawMenu();
+                // }
+                // // If S2 is newly pressed, move selection DOWN.
+                // if (s2State && !s2WasPressed)
+                // {
+                //     if (selectedMenuItem < MENU_ITEMS_COUNT - 1)
+                //         selectedMenuItem++;
+                //     drawMenu();
+                // }
+                // // If both buttons are pressed, execute the selected action.
+                // if (s1State && s2State)
+                // {
+                //     executeMenuAction();
+                //     DELAY_milliseconds(200);
+                // }
                 s1WasPressed = s1State;
                 s2WasPressed = s2State;
 

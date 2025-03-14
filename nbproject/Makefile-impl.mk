@@ -24,7 +24,7 @@ CLEAN_SUBPROJECTS=${CLEAN_SUBPROJECTS_${SUBPROJECTS}}
 
 
 # Project Name
-PROJECTNAME=FinalProjectVlad.X
+PROJECTNAME=Embedded---Smartwatch-Project
 
 # Active Configuration
 DEFAULTCONF=default

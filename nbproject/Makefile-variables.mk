@@ -6,5 +6,5 @@
 CND_BASEDIR=`pwd`
 # default configuration
 CND_ARTIFACT_DIR_default=dist/default/production
-CND_ARTIFACT_NAME_default=FinalProjectVlad.X.production.hex
-CND_ARTIFACT_PATH_default=dist/default/production/FinalProjectVlad.X.production.hex
+CND_ARTIFACT_NAME_default=Embedded---Smartwatch-Project.production.hex
+CND_ARTIFACT_PATH_default=dist/default/production/Embedded---Smartwatch-Project.production.hex
