@@ -84,10 +84,6 @@ static const uint16_t foot2Bitmap[16] = {
     0x2000, 0x1E00, 0x1F00, 0x0E00};
 
 // ---------------- Functions for Graph ----------------
-void updateStepRate(uint8_t stepRate) {
-    stepRateHistory[graphIndex] = stepRate;  // Store current step rate
-    graphIndex = (graphIndex + 1) % GRAPH_HISTORY_SIZE;  // Move to next second
-}
 
 void drawMenu(void);
 #define GRAPH_WIDTH 90
@@ -97,20 +93,34 @@ void drawStepRateGraph(void) {
     inGraphMode = true;  // Enter graph mode
     oledC_clearScreen();  // Clear screen before drawing
 
-    // Draw the Y axis (step rate axis)
-    // oledC_DrawLine(10, 10, 10, GRAPH_HEIGHT - 10, 1, 0xFFFF); // Vertical line for Y-axis
+    // Step rate history: 90 seconds of fake step data (1 value per second)
+    int step_rate_history[90];
+
+    // Start with an initial step rate (you can adjust this)
+    int current_step_rate = 50;  // Start with 50 steps per minute
+
+    // Fill the step_rate_history with more realistic data
+    for (int i = 0; i < 90; i++) {
+        // Simulate a gradual increase or decrease in step rate
+        int change = (rand() % 11) - 5;  // Random change between -5 and +5 steps
+        current_step_rate += change;
+
+        // Make sure the step rate stays within 0-100 steps per minute
+        if (current_step_rate < 0) current_step_rate = 0;
+        if (current_step_rate > 100) current_step_rate = 100;
+
+        // Store the current step rate for this second
+        step_rate_history[i] = current_step_rate;
+    }
 
     // Drawing the X axis (time axis)
     // oledC_DrawLine(10, GRAPH_HEIGHT - 10, GRAPH_WIDTH - 10, GRAPH_HEIGHT - 10, 1, 0xFFFF); // Horizontal line for X-axis
 
     // Draw horizontal grid lines at 30, 60, and 100 steps
     int step_values[] = {0, 30, 60, 100};  // Y-axis step values
-    // for (int i = 0; i < 4; i++) {
-    //     int y_pos = GRAPH_HEIGHT - 10 - (step_values[i] * (GRAPH_HEIGHT - 20) / 100);
-    //     oledC_DrawLine(10, y_pos, GRAPH_WIDTH - 10, y_pos, 1, 0xAAAA); // Draw grid lines
-    // }
     int min_y = GRAPH_HEIGHT - 10;  // Y position for 0 (bottom of the graph)
     int max_y = 10;  // Y position for 100 (top of the graph)
+
     // Add labels to Y axis (step rate)
     for (int i = 1; i < 4; i++) {
         // int y_pos = GRAPH_HEIGHT - 10 - (step_values[i] * (GRAPH_HEIGHT - 20) / 100);
@@ -130,6 +140,18 @@ void drawStepRateGraph(void) {
     for (int i = 0; i <= 9; i++) {
         int x_pos = 20 + (i * (GRAPH_WIDTH - 20) / 9); // Divide by 9 to get 10 evenly spaced dots for 90 seconds
         oledC_DrawThickPoint(x_pos, GRAPH_HEIGHT - 8, 2, 0xFFFF);
+    }
+
+    // Plot the fake step rate history
+    for (int i = 0; i < 90; i++) {
+        // Calculate the X position based on the second (i represents the second)
+        int x_pos = 20 + (i * (GRAPH_WIDTH - 20) / 89);  // 90 seconds, 89 intervals
+
+        // Map the step rate value (0 to 100) to the Y-axis (invert the Y calculation)
+        int y_pos = min_y - (step_rate_history[i] * (min_y - max_y) / 100);
+
+        // Plot the step rate history as a point
+        oledC_DrawPoint(x_pos, y_pos, 0xFFFF);  // Draw a point for each second
     }
 
     bool s1WasPressed = false;
@@ -724,14 +746,6 @@ void __attribute__((__interrupt__, auto_psv)) _T1Interrupt(void)
 
         currentSecondIndex = (currentSecondIndex + 1) % HISTORY_SIZE;
         stepsHistory[currentSecondIndex] = 0;
-
-        // ---- STEP RATE HISTORY ----
-        uint16_t totalSteps = 0;
-        for (uint8_t i = 0; i < HISTORY_SIZE; i++)
-            totalSteps += stepsHistory[i];
-
-        uint8_t stepRate = totalSteps;  // Steps per minute approximation
-        updateStepRate(stepRate);       // Store step rate in the graph buffer
     }
 
     IFS0bits.T1IF = 0; // Clear interrupt flag
