@@ -93,32 +93,25 @@ void drawStepRateGraph(void) {
     inGraphMode = true;  // Enter graph mode
     oledC_clearScreen();  // Clear screen before drawing
 
-    // Step rate history: 90 seconds of fake step data (1 value per second)
-    int step_rate_history[90];
-
-    // Start with an initial step rate (you can adjust this)
-    int current_step_rate = 50;  // Start with 50 steps per minute
-
-    // Fill the step_rate_history with more realistic data
-    for (int i = 0; i < 90; i++) {
-        // Simulate a gradual increase or decrease in step rate
-        int change = (rand() % 11) - 5;  // Random change between -5 and +5 steps
-        current_step_rate += change;
-
-        // Make sure the step rate stays within 0-100 steps per minute
-        if (current_step_rate < 0) current_step_rate = 0;
-        if (current_step_rate > 100) current_step_rate = 100;
-
-        // Store the current step rate for this second
-        step_rate_history[i] = current_step_rate;
-    }
+    int step_rate_history[90] = {
+        30, 35, 40, 50, 60, 65, 70, 75, 80, 85, 
+        90, 100, 95, 90, 85, 80, 75, 70, 65, 60, 
+        55, 50, 55, 60, 65, 70, 80, 85, 90, 85, 
+        80, 75, 70, 60, 55, 50, 45, 40, 35, 30, 
+        25, 20, 15, 10, 12, 15, 20, 25, 30, 35, 
+        40, 45, 50, 55, 60, 70, 75, 80, 85, 90, 
+        95, 90, 80, 75, 70, 65, 60, 55, 50, 45, 
+        40, 35, 30, 25, 20, 15, 10, 15, 20, 25, 
+        30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 
+        85, 90, 95, 100, 95, 90, 85, 80, 75, 70
+    };
 
     // Drawing the X axis (time axis)
-    // oledC_DrawLine(10, GRAPH_HEIGHT - 10, GRAPH_WIDTH - 10, GRAPH_HEIGHT - 10, 1, 0xFFFF); // Horizontal line for X-axis
+    oledC_DrawLine(20, GRAPH_HEIGHT, GRAPH_WIDTH, GRAPH_HEIGHT, 1, 0xFFFF); // Horizontal line for X-axis
 
     // Draw horizontal grid lines at 30, 60, and 100 steps
     int step_values[] = {0, 30, 60, 100};  // Y-axis step values
-    int min_y = GRAPH_HEIGHT - 10;  // Y position for 0 (bottom of the graph)
+    int min_y = GRAPH_HEIGHT;  // Y position for 0 (bottom of the graph)
     int max_y = 10;  // Y position for 100 (top of the graph)
 
     // Add labels to Y axis (step rate)
@@ -139,7 +132,7 @@ void drawStepRateGraph(void) {
     // Draw X-axis as small dots for 90 seconds
     for (int i = 0; i <= 9; i++) {
         int x_pos = 20 + (i * (GRAPH_WIDTH - 20) / 9); // Divide by 9 to get 10 evenly spaced dots for 90 seconds
-        oledC_DrawThickPoint(x_pos, GRAPH_HEIGHT - 8, 2, 0xFFFF);
+        oledC_DrawThickPoint(x_pos, GRAPH_HEIGHT - 2, 1.5, 0xFFFF);
     }
 
     // Plot the fake step rate history
